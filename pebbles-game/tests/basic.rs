@@ -59,7 +59,6 @@ fn game_flow() {
                 std::cmp::min(state.pebbles_remaining, state.max_pebbles_per_turn);
             let _res = game.send(PLAYER, PebblesAction::Turn(pebbles_to_remove));
             sys.run_next_block();
-
         }
     }
 
