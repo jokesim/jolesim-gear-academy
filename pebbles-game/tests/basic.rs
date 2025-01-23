@@ -10,7 +10,6 @@ fn init_game(
     max_pebbles_per_turn: u32,
 ) -> Program<'_> {
     sys.init_logger();
-    // 先部署程序
     let program = Program::current(sys);
     sys.mint_to(PLAYER, 100_000_000_000_000);
 
@@ -86,7 +85,6 @@ fn difficulty_levels() {
 #[test]
 fn invalid_inputs() {
     let sys = System::new();
-    // 先部署程序并为用户铸造代币
     let program = Program::current(&sys);
     sys.mint_to(PLAYER, 100_000_000_000_000);
 
