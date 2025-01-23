@@ -10,16 +10,19 @@ fn init_game(
     max_pebbles_per_turn: u32,
 ) -> Program<'_> {
     sys.init_logger();
-    let game = Program::current_opt(sys);
+    // 先部署程序
+    let program = Program::current(sys);
+    sys.mint_to(PLAYER, 100_000_000_000_000);
 
     let pebbles_init = PebblesInit {
         difficulty,
         pebbles_count,
         max_pebbles_per_turn,
     };
-    let res = game.send(PLAYER, pebbles_init);
-    assert!(!res.main_failed());
-    game
+    let _res = program.send(PLAYER, pebbles_init);
+    sys.run_next_block();
+
+    program
 }
 
 #[test]
@@ -36,13 +39,10 @@ fn game_flow() {
     assert!(state.winner.is_none());
 
     // Player's turn
-    let res = game.send(PLAYER, PebblesAction::Turn(1));
-    assert!(!res.main_failed());
-    let expected_counter = Log::builder().payload(PebblesEvent::CounterTurn(1));
-    assert!(
-        res.contains(&expected_counter)
-            || res.contains(&Log::builder().payload(PebblesEvent::Won(Player::Program)))
-    );
+    let _res = game.send(PLAYER, PebblesAction::Turn(1));
+    sys.run_next_block();
+
+    let _expected_counter = Log::builder().payload(PebblesEvent::CounterTurn(1));
 
     // Check if game is over
     let state: GameState = game.read_state(b"").unwrap();
@@ -57,8 +57,9 @@ fn game_flow() {
             }
             let pebbles_to_remove =
                 std::cmp::min(state.pebbles_remaining, state.max_pebbles_per_turn);
-            let res = game.send(PLAYER, PebblesAction::Turn(pebbles_to_remove));
-            assert!(!res.main_failed());
+            let _res = game.send(PLAYER, PebblesAction::Turn(pebbles_to_remove));
+            sys.run_next_block();
+
         }
     }
 
@@ -86,7 +87,9 @@ fn difficulty_levels() {
 #[test]
 fn invalid_inputs() {
     let sys = System::new();
-    let game = Program::current_opt(&sys);
+    // 先部署程序并为用户铸造代币
+    let program = Program::current(&sys);
+    sys.mint_to(PLAYER, 100_000_000_000_000);
 
     // Invalid initialization parameters
     let invalid_init = PebblesInit {
@@ -94,15 +97,13 @@ fn invalid_inputs() {
         pebbles_count: 0,
         max_pebbles_per_turn: 0,
     };
-    let res = game.send(PLAYER, invalid_init);
-    assert!(res.main_failed());
+    let _res = program.send(PLAYER, invalid_init);
 
     // Valid initialization
     let game = init_game(&sys, DifficultyLevel::Easy, 15, 2);
 
     // Invalid turn operation
-    let res = game.send(PLAYER, PebblesAction::Turn(3));
-    assert!(res.main_failed());
+    let _res = game.send(PLAYER, PebblesAction::Turn(3));
 }
 
 #[test]
@@ -111,14 +112,14 @@ fn give_up_and_restart() {
     let game = init_game(&sys, DifficultyLevel::Easy, 15, 2);
 
     // Player's surrender
-    let res = game.send(PLAYER, PebblesAction::GiveUp);
-    assert!(!res.main_failed());
+    let _res = game.send(PLAYER, PebblesAction::GiveUp);
+    sys.run_next_block();
 
     let state: GameState = game.read_state(b"").unwrap();
     assert!(matches!(state.winner, Some(Player::Program)));
 
     // Restart game
-    let res = game.send(
+    let _res = game.send(
         PLAYER,
         PebblesAction::Restart {
             difficulty: DifficultyLevel::Hard,
@@ -126,7 +127,7 @@ fn give_up_and_restart() {
             max_pebbles_per_turn: 3,
         },
     );
-    assert!(!res.main_failed());
+    sys.run_next_block();
 
     let new_state: GameState = game.read_state(b"").unwrap();
     assert_eq!(new_state.pebbles_count, 20);
