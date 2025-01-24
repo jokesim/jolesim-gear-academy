@@ -98,6 +98,7 @@ extern "C" fn init() {
     }
 }
 
+#[allow(static_mut_refs)]
 #[no_mangle]
 extern "C" fn handle() {
     let action: PebblesAction = msg::load().expect("Failed to decode action");
@@ -134,6 +135,7 @@ extern "C" fn handle() {
     msg::reply(event, 0).expect("Failed to send game event");
 }
 
+#[allow(static_mut_refs)]
 #[no_mangle]
 extern "C" fn state() {
     let state = unsafe { GAME_CONTEXT.as_ref().expect("Game not initialized") };
